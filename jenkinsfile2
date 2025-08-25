@@ -1,50 +1,80 @@
 pipeline {
     agent any
+
     parameters {
         booleanParam(name: 'RUN_DEPLOY', defaultValue: true, description: 'Should we deploy?')
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Select deployment environment')
     }
+
     stages {
         stage('Build') {
             steps {
-                echo 'Building application...'
+                echo '🔨 Building application...'
+                sh 'echo "Compiling source code..."'
             }
         }
+
         stage('Test in Parallel') {
             parallel {
                 stage('Unit Tests') {
                     steps {
-                        echo 'Running unit tests...'
+                        echo '🧪 Running unit tests...'
                         sh 'sleep 5'
                     }
                 }
                 stage('Integration Tests') {
                     steps {
-                        echo 'Running integration tests...'
+                        echo '🔗 Running integration tests...'
                         sh 'sleep 5'
                     }
                 }
             }
         }
+
+        stage('Simulated OS Testing') {
+            parallel {
+                stage('Linux Simulation') {
+                    steps {
+                        echo '🐧 Simulating test on Linux...'
+                        sh 'echo "Running Linux-based tests..."'
+                    }
+                }
+                stage('Windows Simulation') {
+                    steps {
+                        echo '🪟 Simulating test on Windows...'
+                        sh 'echo "Running Windows-based tests..."'
+                    }
+                }
+            }
+        }
+
         stage('Test') {
             steps {
                 sh 'echo "All tests passed!" > results.txt'
                 archiveArtifacts artifacts: 'results.txt', fingerprint: true
             }
         }
+
         stage('Approval') {
             steps {
-                input "Do you want to proceed with deployment?"
+                timeout(time: 2, unit: 'MINUTES') {
+                    input message: "Do you want to proceed with deployment?"
+                }
             }
         }
+
         stage('Deploy') {
             when {
-                expression { return params.RUN_DEPLOY }
+                allOf {
+                    expression { return params.RUN_DEPLOY }
+                }
             }
             steps {
-                echo 'Deploying application...'
+                echo "🚀 Deploying application to environment: ${params.ENVIRONMENT}"
             }
         }
     }
+
     post {
         success {
             echo '✅ Pipeline finished successfully!'
@@ -53,7 +83,7 @@ pipeline {
             echo '❌ Pipeline failed. Check logs!'
         }
         always {
-            echo 'Pipeline completed (success or failure).'
+            echo '📦 Pipeline completed (success or failure).'
         }
     }
 }
